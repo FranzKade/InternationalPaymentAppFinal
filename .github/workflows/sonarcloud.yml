@@ -1,35 +1,51 @@
-name: Build
+name: SonarCloud Analysis
 on:
   push:
     branches:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+
 jobs:
-  sonarqube:
-    name: SonarQube
+  sonarcloud:
+    name: SonarCloud Analysis
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
-      - uses: actions/checkout@10e2db214292b813e594b1bd820017798e3df0bf # v4.3.1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
 
+      # Set up Node.js for frontend analysis
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Install dependencies (frontend)
-        run: |
-          cd frontend
-          npm install
+      # Frontend build and test
+      - name: Install frontend dependencies
+        working-directory: ./vs/frontend
+        run: npm ci
 
-      - name: Install dependencies (backend)
-        run: |
-          cd backend
-          npm install
-          
-        - name: SonarQube Scan
-            uses: SonarSource/sonoarqube-scan-action@10e2db214292b813e594b1bd820017798e3df0bf # v6.0.0
-          env:
-            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}     
+      - name: Build frontend
+        working-directory: ./vs/frontend
+        run: npm run build
+
+      - name: Run frontend tests with coverage
+        working-directory: ./vs/frontend
+        run: npm test -- --coverage --watchAll=false --passWithNoTests
+
+      # Backend analysis (optional linting)
+      - name: Install backend dependencies
+        working-directory: ./vs/backend
+        run: npm ci
+
+      # SonarCloud Scan
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
