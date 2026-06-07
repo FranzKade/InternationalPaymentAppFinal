@@ -1,16 +1,18 @@
-name: SonarCloud Scan
-
+name: Build
 on:
   push:
     branches:
       - main
-
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
-  sonarcloud:
+  sonarqube:
+    name: SonarQube
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@10e2db214292b813e594b1bd820017798e3df0bf # v4.3.1
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -26,13 +28,8 @@ jobs:
         run: |
           cd backend
           npm install
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        with:
-          args: >
-            -Dsonar.projectKey=franzkade
-            -Dsonar.organization=IP_Scanner
-            -Dsonar.sources=.
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          
+        - name: SonarQube Scan
+            uses: SonarSource/sonoarqube-scan-action@10e2db214292b813e594b1bd820017798e3df0bf # v6.0.0
+          env:
+            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}     
